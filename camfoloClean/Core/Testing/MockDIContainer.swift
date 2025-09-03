@@ -11,6 +11,12 @@ import Foundation
 /// 提供所有模块的Mock依赖，支持集成测试和UI预览
 final class MockDIContainer: @unchecked Sendable, DIContainer {
     
+    // MARK: - Core Services
+    
+    var permissionService: PermissionServiceProtocol {
+        MockPermissionService()
+    }
+    
     // MARK: - Mock Repositories
     
     /// Mock认证仓库，创建已登录的测试用户，避免认证流程阻塞Camera功能测试

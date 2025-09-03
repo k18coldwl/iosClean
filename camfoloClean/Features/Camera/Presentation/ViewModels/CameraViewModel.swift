@@ -49,6 +49,12 @@ final class CameraViewModel {
     /// 相机状态
     var isCameraActive = false
     
+    /// 设置面板显示状态
+    var showingSettings = false
+    
+    /// 预设面板显示状态  
+    var showingPresets = false
+    
     // MARK: - Use Cases
     
     private let cameraUseCase: CameraUseCaseProtocol
@@ -276,6 +282,22 @@ final class CameraViewModel {
     /// 清除当前照片
     func clearCapturedPhoto() {
         capturedPhoto = nil
+    }
+    
+    /// 切换设置面板显示状态
+    func toggleSettings() {
+        showingSettings.toggle()
+        if showingSettings {
+            showingPresets = false // 同时只显示一个面板
+        }
+    }
+    
+    /// 切换预设面板显示状态
+    func togglePresets() {
+        showingPresets.toggle()
+        if showingPresets {
+            showingSettings = false // 同时只显示一个面板
+        }
     }
     
     // MARK: - Private Methods

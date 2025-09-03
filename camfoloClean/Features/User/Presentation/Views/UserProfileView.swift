@@ -26,11 +26,11 @@ struct UserProfileView: View {
                             .aspectRatio(contentMode: .fill)
                     } placeholder: {
                         Circle()
-                            .fill(Color.gray.opacity(0.3))
+                            .fill(Color.white.opacity(0.1))
                             .overlay(
                                 Image(systemName: "person.fill")
                                     .font(.title)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.white.opacity(0.7))
                             )
                     }
                     .frame(width: 100, height: 100)
@@ -41,11 +41,12 @@ struct UserProfileView: View {
                         Text(user.displayName ?? "Unknown User")
                             .font(.title2)
                             .fontWeight(.semibold)
+                            .foregroundColor(.white)
                         
                         if let email = user.email {
                             Text(email)
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.white.opacity(0.7))
                         }
                         
                         // Provider Badge
@@ -57,8 +58,8 @@ struct UserProfileView: View {
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 4)
-                        .background(Color.blue.opacity(0.1))
-                        .foregroundColor(.blue)
+                        .background(Color.white.opacity(0.1))
+                        .foregroundColor(.white.opacity(0.8))
                         .cornerRadius(12)
                     }
                     
@@ -83,11 +84,11 @@ struct UserProfileView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "person.circle")
                             .font(.system(size: 80))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.white.opacity(0.7))
                         
                         Text("Not signed in")
                             .font(.title2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.white)
                     }
                     
                     Spacer()
@@ -95,6 +96,10 @@ struct UserProfileView: View {
             }
             .padding(.top, 32)
             .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(Color.black, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .background(Color.black)
             .alert("Sign Out", isPresented: $showingSignOut) {
                 Button("Cancel", role: .cancel) { }
                 Button("Sign Out", role: .destructive) {

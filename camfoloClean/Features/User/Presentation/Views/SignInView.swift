@@ -22,15 +22,16 @@ struct SignInView: View {
                 
                 Image(systemName: "camera.fill")
                     .font(.system(size: 80))
-                    .foregroundColor(.blue)
+                    .foregroundColor(.white)
                 
                 Text("Welcome to CamFolo")
                     .font(.largeTitle)
                     .fontWeight(.bold)
+                    .foregroundColor(.white)
                 
                 Text("Sign in to continue")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.7))
                 
                 Spacer()
             }

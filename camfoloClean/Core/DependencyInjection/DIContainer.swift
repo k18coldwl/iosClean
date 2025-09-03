@@ -8,6 +8,9 @@
 import Foundation
 
 protocol DIContainer: Sendable {
+    // Core Services
+    var permissionService: PermissionServiceProtocol { get }
+    
     // Auth Dependencies
     var authRepository: AuthRepository { get }
     var authUseCase: AuthUseCaseProtocol { get }
@@ -25,7 +28,12 @@ protocol DIContainer: Sendable {
 
 final class DefaultDIContainer: @unchecked Sendable, DIContainer {
     
-    // MARK: - Services
+    // MARK: - Core Services
+    lazy var permissionService: PermissionServiceProtocol = {
+        PermissionService()
+    }()
+    
+    // MARK: - Auth Services
     private lazy var appleSignInService: AuthProviderService = {
         AppleSignInService()
     }()
