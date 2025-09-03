@@ -173,25 +173,121 @@ extension DomainError {
 
 ## 测试支持规范
 
-### Mock实现
+### Mock架构规范
+
+#### Mock模块化组织
+遵循Clean Architecture原则，Mock实现应该按模块分离：
+
 ```swift
-// 每个模块都应该提供Mock实现
+// ✅ 推荐：模块化Mock组织
+Core/
+└── Testing/
+    └── MockDIContainer.swift           # 统一协调Mock依赖
+
+Features/
+├── User/Domain/UseCases/
+│   └── MockAuthRepository.swift        # User模块Mock
+└── Camera/Domain/UseCases/
+    └── MockCameraRepository.swift      # Camera模块Mock
+```
+
+#### Mock实现标准
+```swift
+// 每个模块的Mock实现应该独立且完整
 final class MockAuthRepository: @unchecked Sendable, AuthRepository {
-    private var mockData: [String: Any] = [:]
+    private var currentUserValue: User?
+    private var shouldFail = false
+    
+    init(initialUser: User? = nil) {
+        self.currentUserValue = initialUser
+    }
     
     // 提供可配置的Mock行为
-    func configure(shouldFailWith error: Error? = nil) {
-        // Mock配置逻辑
+    func configure(shouldFail: Bool = false, user: User? = nil) {
+        self.shouldFail = shouldFail
+        if let user = user {
+            updateUser(user)
+        }
+    }
+    
+    func signInWithGoogle() async throws -> AuthResult {
+        if shouldFail {
+            throw AuthError.networkError(error: NSError(domain: "MockError", code: -1))
+        }
+        
+        // 模拟网络延迟
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        
+        let user = User(
+            id: "google_123",
+            email: "test@gmail.com",
+            displayName: "Test User",
+            photoURL: nil as URL?,
+            provider: AuthProvider.google
+        )
+        
+        updateUser(user)
+        return AuthResult(user: user, isNewUser: false)
     }
 }
 ```
 
-### Preview支持
+#### 统一Mock容器
 ```swift
-#Preview {
+// Core/Testing/MockDIContainer.swift
+final class MockDIContainer: @unchecked Sendable, DIContainer {
+    
+    // MARK: - Mock Dependencies
+    
+    private let mockAuthRepository = MockAuthRepository(initialUser: User(
+        id: "test_user_123",
+        email: "test@example.com", 
+        displayName: "Test User",
+        photoURL: nil as URL?,
+        provider: AuthProvider.google
+    ))
+    
+    private let mockCameraRepository = MockCameraRepository()
+    
+    // MARK: - UseCase Assembly
+    
+    var authUseCase: AuthUseCaseProtocol {
+        AuthUseCase(authRepository: mockAuthRepository)
+    }
+    
+    var cameraUseCase: CameraUseCaseProtocol {
+        CameraUseCase(
+            cameraRepository: mockCameraRepository,
+            localPhotoLibraryRepository: mockLocalPhotoLibraryRepository,
+            systemPhotoLibraryRepository: mockSystemPhotoLibraryRepository
+        )
+    }
+    
+    // MARK: - Configuration Interface
+    
+    func configureMockAuth(shouldFail: Bool = false, user: User? = nil) {
+        mockAuthRepository.configure(shouldFail: shouldFail, user: user)
+    }
+    
+    func configureMockCamera(hasPermission: Bool = true, shouldFailCapture: Bool = false) {
+        mockCameraRepository.configure(hasPermission: hasPermission, shouldFailCapture: shouldFailCapture)
+    }
+}
+```
+
+### Preview集成
+```swift
+#Preview("正常状态") {
     let mockContainer = MockDIContainer()
     let viewModel = mockContainer.makeAuthViewModel()
-    return SomeView(viewModel: viewModel)
+    return AuthView(viewModel: viewModel)
+}
+
+#Preview("错误状态") {
+    let mockContainer = MockDIContainer()
+    mockContainer.configureMockAuth(shouldFail: true)
+    let viewModel = mockContainer.makeAuthViewModel()
+    return AuthView(viewModel: viewModel)
 }
 ```
 
@@ -239,4 +335,5 @@ actor SharedStateManager {
         state = newState
     }
 }
+```
 ```

@@ -73,22 +73,81 @@ Data Layer (Repository Implementations)
 ## Mock和测试支持
 
 ### Mock容器设计
+
+#### 统一Mock DI容器
+位于`Core/Testing/MockDIContainer.swift`，协调所有模块的Mock依赖：
+
 ```swift
 final class MockDIContainer: @unchecked Sendable, DIContainer {
-    private let mockAuthRepository = MockAuthRepository()
     
-    // 提供配置Mock行为的方法
-    func configureMockAuth(shouldFail: Bool = false, user: User? = nil) {
-        mockAuthRepository.configure(shouldFail: shouldFail, user: user)
-    }
+    // MARK: - Mock Repositories (按模块组织)
+    
+    /// User模块Mock - 创建已登录的测试用户，避免认证流程阻塞其他功能测试
+    private let mockAuthRepository = MockAuthRepository(initialUser: User(
+        id: "test_user_123",
+        email: "test@example.com", 
+        displayName: "Test User",
+        photoURL: nil as URL?,
+        provider: AuthProvider.google
+    ))
+    
+    private let mockCameraRepository = MockCameraRepository()
+    private let mockLocalPhotoLibraryRepository = MockLocalPhotoLibraryRepository()
+    private let mockSystemPhotoLibraryRepository = MockSystemPhotoLibraryRepository()
+    
+    // MARK: - UseCase Assembly
     
     var authUseCase: AuthUseCaseProtocol {
         AuthUseCase(authRepository: mockAuthRepository)
     }
     
-    @MainActor
-    func makeAuthViewModel() -> AuthViewModel {
-        AuthViewModel(authUseCase: authUseCase)
+    var cameraUseCase: CameraUseCaseProtocol {
+        CameraUseCase(
+            cameraRepository: mockCameraRepository,
+            localPhotoLibraryRepository: mockLocalPhotoLibraryRepository,
+            systemPhotoLibraryRepository: mockSystemPhotoLibraryRepository
+        )
+    }
+    
+    // MARK: - Configuration Methods
+    
+    /// 配置认证Mock行为
+    func configureMockAuth(shouldFail: Bool = false, user: User? = nil) {
+        mockAuthRepository.configure(shouldFail: shouldFail, user: user)
+    }
+    
+    /// 配置相机Mock行为
+    func configureMockCamera(hasPermission: Bool = true, shouldFailCapture: Bool = false) {
+        mockCameraRepository.configure(hasPermission: hasPermission, shouldFailCapture: shouldFailCapture)
+    }
+}
+```
+
+#### 模块内Mock实现
+每个模块在自己的Domain/UseCases目录下维护Mock实现：
+
+```swift
+// Features/User/Domain/UseCases/MockAuthRepository.swift
+final class MockAuthRepository: @unchecked Sendable, AuthRepository {
+    private var currentUserValue: User?
+    private var shouldFail = false
+    
+    init(initialUser: User? = nil) {
+        self.currentUserValue = initialUser
+    }
+    
+    func configure(shouldFail: Bool = false, user: User? = nil) {
+        self.shouldFail = shouldFail
+        if let user = user {
+            updateUser(user)
+        }
+    }
+    
+    func signInWithGoogle() async throws -> AuthResult {
+        if shouldFail {
+            throw AuthError.networkError(error: NSError(domain: "MockError", code: -1))
+        }
+        // Mock实现逻辑...
     }
 }
 ```

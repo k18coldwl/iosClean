@@ -47,31 +47,54 @@ xcodebuild -scheme camfoloClean -destination 'platform=iOS Simulator,name=iPhone
 - **架构调整和代码组织**
 - **UI布局和样式调整**
 
-## Mock优先开发策略
+## Mock实现规范
 
-### Mock实现要求
+### Mock组织原则
+Mock实现应该按模块分离，遵循模块化设计：
+
 ```swift
-// ✅ 完整的Mock实现，支持Preview即时验证
-final class MockCameraUseCase: CameraUseCaseProtocol {
-    private var hasPermission = true  // 默认权限已授权
+// ✅ 推荐：模块内Mock实现
+// Features/Camera/Domain/UseCases/MockCameraRepository.swift
+final class MockCameraRepository: @unchecked Sendable, CameraRepository {
+    private var hasPermission = true
+    private var shouldFailCapture = false
     
-    func ensureCameraPermission() async -> Bool {
-        return hasPermission  // 立即返回，无异步延迟
+    func configure(hasPermission: Bool = true, shouldFailCapture: Bool = false) {
+        self.hasPermission = hasPermission
+        self.shouldFailCapture = shouldFailCapture
+    }
+    
+    func checkCameraPermission() async -> Bool {
+        return hasPermission
     }
     
     func capturePhoto(with settings: CameraSettings) async throws -> Photo {
-        // 提供可视化的Mock数据，便于UI验证
-        let mockImage = createMockImage(for: settings)
-        return Photo(image: mockImage, cameraSettings: settings)
+        if shouldFailCapture {
+            throw CameraError.captureFailure
+        }
+        // 返回Mock照片数据
+        return createMockPhoto(for: settings)
     }
 }
 ```
 
-### Preview验证优势
-- **即时反馈** - 代码更改后立即看到UI效果
-- **无需模拟器** - 在Xcode Canvas中直接预览
-- **多状态测试** - 可以同时预览不同状态的UI
-- **快速迭代** - 修改代码后即时更新预览
+### Preview支持设计
+Mock实现应该支持SwiftUI Preview的即时验证：
+
+```swift
+#Preview("正常状态") {
+    let mockContainer = MockDIContainer()
+    let viewModel = mockContainer.makeCameraViewModel()
+    return CameraView(viewModel: viewModel)
+}
+
+#Preview("权限拒绝状态") {
+    let mockContainer = MockDIContainer()
+    mockContainer.configureMockCamera(hasPermission: false)
+    let viewModel = mockContainer.makeCameraViewModel()
+    return CameraView(viewModel: viewModel)
+}
+```
 
 ## 错误处理验证
 

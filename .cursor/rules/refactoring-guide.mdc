@@ -149,3 +149,84 @@ xcodebuild -project Project.xcodeproj -scheme Scheme -destination 'platform=iOS 
 ### 场景4：重复的错误处理
 **问题**：相似的错误处理逻辑分散在多处
 **解决**：统一错误处理和映射逻辑
+
+### 场景5：Mock实现组织混乱
+**问题**：跨模块Mock混合在单一文件中
+**解决**：按模块分离Mock实现
+
+## Mock重构专项指南
+
+### Mock重构决策
+满足以下条件时需要重构Mock组织：
+- [ ] 单个Mock文件包含多个模块的实现
+- [ ] Mock文件职责不清晰
+- [ ] 跨模块依赖导致编译复杂
+- [ ] 模块变更影响其他模块的Mock文件
+
+### Mock重构步骤
+
+#### 1. 分析现有Mock结构
+```markdown
+## Mock重构前分析
+- 当前Mock文件：[列出所有Mock文件]
+- 模块覆盖：[统计每个模块的Mock实现]
+- 依赖关系：[分析跨模块依赖]
+- 主要问题：[职责混乱、依赖复杂等]
+```
+
+#### 2. 设计新的Mock架构
+```markdown
+## Mock重构计划
+- [ ] 创建Core/Testing/MockDIContainer.swift
+- [ ] 按模块分离Mock实现
+- [ ] 更新所有Preview引用
+- [ ] 删除原始混合Mock文件
+- [ ] 验证编译和Preview功能
+```
+
+#### 3. Mock重构实施
+
+**第一步：创建统一Mock容器**
+```swift
+// Core/Testing/MockDIContainer.swift
+final class MockDIContainer: @unchecked Sendable, DIContainer {
+    // 协调所有模块的Mock依赖
+    private let mockAuthRepository = MockAuthRepository()
+    private let mockCameraRepository = MockCameraRepository()
+    
+    // 提供配置接口
+    func configureMockAuth(shouldFail: Bool = false, user: User? = nil) {
+        mockAuthRepository.configure(shouldFail: shouldFail, user: user)
+    }
+}
+```
+
+**第二步：创建模块内Mock**
+```swift
+// Features/User/Domain/UseCases/MockAuthRepository.swift
+final class MockAuthRepository: @unchecked Sendable, AuthRepository {
+    // 只包含User模块相关的Mock实现
+}
+
+// Features/Camera/Domain/UseCases/MockCameraRepository.swift  
+final class MockCameraRepository: @unchecked Sendable, CameraRepository {
+    // 只包含Camera模块相关的Mock实现
+}
+```
+
+**第三步：更新引用**
+- 更新所有Preview中的Mock引用
+- 确保类型导入正确
+- 验证编译通过
+
+**第四步：清理**
+- 删除原始的混合Mock文件
+- 清理未使用的import
+- 验证最终编译
+
+### Mock重构验证清单
+- [ ] 每个模块的Mock实现独立
+- [ ] 统一Mock容器协调所有依赖
+- [ ] 所有Preview正常工作
+- [ ] 编译无错误和警告
+- [ ] Mock配置接口清晰易用

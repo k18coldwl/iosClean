@@ -77,7 +77,53 @@ protocol AuthUseCaseProtocol: Sendable {
 ### 文件组织
 - 每个文件只包含一个主要的类或协议
 - 相关的小型辅助类型可以放在同一文件中
-- Mock实现统一放在`MockUseCases.swift`中
+
+## Mock实现组织规范
+
+### 模块化Mock设计
+Mock实现应该按模块分离，避免跨模块依赖：
+
+```
+Core/
+└── Testing/
+    └── MockDIContainer.swift           # 统一的Mock DI容器
+
+Features/
+├── User/
+│   └── Domain/
+│       └── UseCases/
+│           └── MockAuthRepository.swift # 只包含User模块Mock
+└── Camera/
+    └── Domain/
+        └── UseCases/
+            └── MockCameraRepository.swift # 只包含Camera模块Mock
+```
+
+### Mock文件职责
+- **模块内Mock**: 每个模块的Domain/UseCases目录下只包含本模块的Mock实现
+- **统一DI容器**: Core/Testing/MockDIContainer.swift协调所有模块的Mock依赖
+- **职责分离**: 避免一个Mock文件包含多个模块的实现
+
+### Mock命名规范
+- Mock Repository: `Mock{ModuleName}Repository.swift`
+- Mock UseCase: 如需要可创建`Mock{ModuleName}UseCase.swift`
+- 统一容器: `MockDIContainer.swift`
+
+### ❌ 避免的Mock反模式
+```swift
+// ❌ 避免：跨模块Mock混合
+// User/Domain/UseCases/MockUseCases.swift 包含Camera模块Mock
+final class MockUseCases {
+    let authRepository = MockAuthRepository()      // ✓ 属于User模块
+    let cameraRepository = MockCameraRepository()  // ❌ 属于Camera模块
+}
+
+// ✅ 推荐：模块内Mock分离
+// User/Domain/UseCases/MockAuthRepository.swift
+final class MockAuthRepository: AuthRepository { }
+
+// Camera/Domain/UseCases/MockCameraRepository.swift  
+final class MockCameraRepository: CameraRepository { }
 
 ## 错误处理规范
 
