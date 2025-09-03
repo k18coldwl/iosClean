@@ -1,0 +1,152 @@
+---
+alwaysApply: true
+description: 测试工作流程和编译验证规范
+---
+
+# 测试工作流程规范
+
+## 开发阶段测试策略
+
+### 编译验证优先原则
+在功能开发和代码重构过程中，以编译成功作为主要验证标准：
+
+```bash
+# ✅ 推荐：仅编译验证
+xcodebuild -scheme camfoloClean -destination 'platform=iOS Simulator,name=iPhone 16 Pro' build
+
+# ❌ 避免：在开发阶段启动模拟器测试
+# xcrun simctl launch "iPhone 16 Pro" com.camfolo.edit
+```
+
+### 开发阶段验证清单
+1. **代码编译通过** - 无语法错误和类型错误
+2. **依赖注入配置正确** - DI容器正确配置所有依赖
+3. **协议一致性验证** - 所有实现类正确实现协议
+4. **Mock实现完整** - Preview和测试用Mock类功能完整
+5. **架构规范遵循** - 符合Clean Architecture分层规范
+
+## 真实设备测试策略
+
+### 开发环境说明
+- **主要测试环境**: 真实iOS设备
+- **权限验证**: 在真实设备上进行权限流程测试
+- **硬件功能**: 相机、相册等硬件相关功能需要真实设备验证
+
+### 适合真实设备测试的场景
+- **权限请求流程验证** - 相机、相册、位置等权限
+- **硬件功能测试** - 相机拍照、闪光灯、前后摄像头切换
+- **用户界面交互测试** - 触摸手势、按钮响应
+- **错误处理用户体验测试** - 权限拒绝、网络错误等场景
+- **性能和内存使用测试** - 真实性能表现
+
+### 编译验证足够的场景
+- **代码重构和优化**
+- **新功能模块开发**（非硬件相关）
+- **依赖注入配置调整**
+- **错误修复和bug解决**
+- **架构调整和代码组织**
+- **UI布局和样式调整**
+
+## Mock优先开发策略
+
+### Mock实现要求
+```swift
+// ✅ 完整的Mock实现，支持Preview即时验证
+final class MockCameraUseCase: CameraUseCaseProtocol {
+    private var hasPermission = true  // 默认权限已授权
+    
+    func ensureCameraPermission() async -> Bool {
+        return hasPermission  // 立即返回，无异步延迟
+    }
+    
+    func capturePhoto(with settings: CameraSettings) async throws -> Photo {
+        // 提供可视化的Mock数据，便于UI验证
+        let mockImage = createMockImage(for: settings)
+        return Photo(image: mockImage, cameraSettings: settings)
+    }
+}
+```
+
+### Preview验证优势
+- **即时反馈** - 代码更改后立即看到UI效果
+- **无需模拟器** - 在Xcode Canvas中直接预览
+- **多状态测试** - 可以同时预览不同状态的UI
+- **快速迭代** - 修改代码后即时更新预览
+
+## 错误处理验证
+
+### 编译时错误检查
+```swift
+// 确保所有错误路径都有正确的类型和处理
+func handleError(_ error: Error) {
+    if let cameraError = error as? CameraError {
+        handleCameraError(cameraError)  // 编译器验证类型安全
+    } else {
+        errorMessage = error.localizedDescription
+    }
+}
+```
+
+### 静态分析验证
+- **类型安全** - Swift编译器确保类型正确性
+- **并发安全** - Swift 6严格并发检查
+- **内存安全** - ARC和所有权检查
+- **协议一致性** - 编译时验证所有协议实现
+
+## 开发效率最佳实践
+
+### 快速验证流程
+1. **代码编写** → **编译验证** → **Preview检查** → **继续开发**
+2. 避免频繁的模拟器启动和应用安装
+3. 使用Mock数据快速验证UI逻辑
+4. 利用SwiftUI Preview的实时更新能力
+
+### 真实设备测试最佳实践
+
+#### 构建和部署流程
+```bash
+# 1. 编译验证
+xcodebuild -scheme camfoloClean -destination 'generic/platform=iOS' build
+
+# 2. 真实设备部署（通过Xcode直接运行到设备）
+# 或使用命令行：
+# xcodebuild -scheme camfoloClean -destination 'platform=iOS,name=Your Device Name' build
+
+# 3. 权限测试流程
+# - 首次启动：验证权限请求对话框
+# - 权限拒绝：验证错误处理和引导用户到设置
+# - 权限授权：验证功能正常工作
+```
+
+#### 真实设备调试优势
+- **真实权限流程** - 系统权限对话框和设置集成
+- **硬件性能** - 真实的相机响应速度和质量
+- **内存压力** - 真实的内存限制和性能表现
+- **网络环境** - 真实的网络延迟和错误场景
+
+## 代码质量保证
+
+### 编译成功的质量标准
+- **零警告** - 解决所有编译警告
+- **类型安全** - 无强制类型转换
+- **并发安全** - 正确使用@MainActor和Sendable
+- **内存管理** - 避免循环引用和内存泄漏
+
+### Preview作为质量验证
+```swift
+#Preview("正常状态") {
+    let mockContainer = MockDIContainer()
+    let viewModel = mockContainer.makeCameraViewModel()
+    return CameraView(viewModel: viewModel)
+        .environmentObject(AppContainer.shared)
+}
+
+#Preview("权限拒绝状态") {
+    let mockContainer = MockDIContainer()
+    let viewModel = mockContainer.makeCameraViewModel()
+    // 配置特定状态进行验证
+    return CameraView(viewModel: viewModel)
+}
+```
+
+通过这种方式，开发效率可以提升3-5倍，同时保持代码质量和功能正确性。

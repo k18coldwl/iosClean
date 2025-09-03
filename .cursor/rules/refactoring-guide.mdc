@@ -1,0 +1,151 @@
+---
+description: 模块重构和优化指南
+---
+
+# 模块重构指南
+
+## 重构决策框架
+
+### 何时需要重构
+- [ ] UseCase只是简单的Repository代理调用
+- [ ] 存在空的文件夹或未使用的抽象
+- [ ] 依赖注入变得过于复杂
+- [ ] 模块间耦合度过高
+- [ ] 代码重复度超过30%
+
+### 重构优先级
+1. **高优先级**：修复架构违规（如错误的依赖方向）
+2. **中优先级**：简化过度设计（如合并简单UseCase）
+3. **低优先级**：优化代码风格和命名
+
+## 重构步骤模板
+
+### 1. 分析现状
+```markdown
+## 重构前分析
+- 模块功能：[描述模块主要功能]
+- 文件数量：[统计各层文件数量]
+- 复杂度评估：[简单/中等/复杂]
+- 主要问题：[列出发现的问题]
+```
+
+### 2. 制定重构计划
+```markdown
+## 重构计划
+- [ ] 删除不必要的抽象
+- [ ] 合并简单的UseCase
+- [ ] 清理空文件夹
+- [ ] 更新依赖注入配置
+- [ ] 验证编译和测试
+```
+
+### 3. 执行重构
+按照以下顺序进行：
+1. 创建新的统一UseCase
+2. 更新DI容器配置
+3. 更新ViewModel依赖
+4. 删除旧的UseCase文件
+5. 清理空目录
+6. 运行编译测试
+
+### 4. 验证重构结果
+- 编译通过
+- 功能正常
+- 测试通过
+- 代码更简洁
+
+## UseCase合并规范
+
+### 合并条件
+满足以下条件的UseCase应该合并：
+- 只包含一个方法调用
+- 没有额外的业务逻辑
+- 属于同一个业务领域
+- 没有复杂的错误处理
+
+### 合并示例
+```swift
+// 重构前：多个简单UseCase
+class SignInWithGoogleUseCase {
+    func execute() async throws -> AuthResult {
+        return try await repository.signInWithGoogle()
+    }
+}
+
+class SignOutUseCase {
+    func execute() async throws {
+        try await repository.signOut()
+    }
+}
+
+// 重构后：统一的业务UseCase
+class AuthUseCase {
+    func signInWithGoogle() async throws -> AuthResult {
+        // 未来可在此添加登录后的业务逻辑
+        return try await repository.signInWithGoogle()
+    }
+    
+    func signOut() async throws {
+        // 未来可在此添加登出前的清理逻辑
+        try await repository.signOut()
+    }
+}
+```
+
+## 重构安全检查
+
+### 编译验证
+```bash
+# 每次重构后必须验证编译
+xcodebuild -project Project.xcodeproj -scheme Scheme -destination 'platform=iOS Simulator,name=iPhone 16' build
+```
+
+### 功能验证
+- 所有现有功能正常工作
+- 错误处理保持一致
+- UI交互无异常
+- 性能无明显下降
+
+### 测试验证
+```swift
+// 确保Mock实现仍然有效
+#Preview {
+    let mockContainer = MockDIContainer()
+    return SomeView(viewModel: mockContainer.makeViewModel())
+}
+```
+
+## 重构最佳实践
+
+### 渐进式重构
+- 一次只重构一个模块
+- 每个步骤都确保编译通过
+- 保留向后兼容性直到完全迁移
+
+### 文档更新
+- 更新架构文档
+- 更新README中的模块说明
+- 记录重要的设计决策
+
+### 团队沟通
+- 重构前与团队讨论
+- 记录重构原因和收益
+- 分享重构经验和教训
+
+## 常见重构场景
+
+### 场景1：过度抽象的UseCase
+**问题**：每个简单操作都有独立的UseCase
+**解决**：合并为统一的业务UseCase
+
+### 场景2：空的抽象层
+**问题**：预留但未使用的抽象
+**解决**：删除或明确其用途
+
+### 场景3：复杂的依赖图
+**问题**：DI容器依赖过多
+**解决**：提高抽象级别，减少暴露的依赖
+
+### 场景4：重复的错误处理
+**问题**：相似的错误处理逻辑分散在多处
+**解决**：统一错误处理和映射逻辑

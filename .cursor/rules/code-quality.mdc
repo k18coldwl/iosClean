@@ -1,0 +1,196 @@
+---
+globs: *.swift
+description: Swift代码质量和风格规范
+---
+
+# Swift代码质量规范
+
+## 注释规范
+
+### 必须添加注释的场景
+```swift
+/// 类级别注释：说明类的职责和设计意图
+/// 负责处理用户认证相关的所有业务逻辑
+/// 使用Repository模式与数据层解耦，支持多种认证方式
+final class AuthUseCase: AuthUseCaseProtocol {
+    
+    /// 重要方法注释：说明参数、返回值、异常
+    /// - Parameter provider: 认证提供商类型
+    /// - Returns: 认证结果，包含用户信息和是否为新用户
+    /// - Throws: AuthError 认证失败时抛出
+    func signIn(with provider: AuthProvider) async throws -> AuthResult {
+        
+        // 核心逻辑注释：解释业务规则和实现原因
+        // 业务规则：Apple登录需要验证nonce以防止重放攻击
+        guard let nonce = generateSecureNonce() else {
+            throw AuthError.securityValidationFailed
+        }
+    }
+}
+```
+
+### 注释语言规范
+- **业务概念**：使用中文解释业务逻辑和用户场景
+- **技术实现**：使用英文注释技术细节和API说明
+- **混合使用**：在同一注释中可以中英文混用，以最清晰为准
+
+## 代码组织
+
+### MARK注释使用
+```swift
+class ExampleClass {
+    // MARK: - Properties
+    private let dependency: Dependency
+    
+    // MARK: - Initialization
+    init(dependency: Dependency) {
+        self.dependency = dependency
+    }
+    
+    // MARK: - Public Methods
+    func publicMethod() { }
+    
+    // MARK: - Private Methods
+    private func privateMethod() { }
+}
+```
+
+### 扩展组织
+```swift
+// MARK: - Protocol Conformance
+extension ClassName: ProtocolName {
+    // 协议实现
+}
+
+// MARK: - Helper Extensions
+private extension ClassName {
+    // 私有辅助方法
+}
+```
+
+## 异步编程规范
+
+### async/await最佳实践
+```swift
+// ✅ 推荐：使用async/await
+func fetchUserData() async throws -> UserData {
+    let user = try await userRepository.getCurrentUser()
+    let profile = try await profileRepository.getProfile(for: user.id)
+    return UserData(user: user, profile: profile)
+}
+
+// ✅ 正确处理并发
+func fetchMultipleData() async throws -> (User, Profile) {
+    async let user = userRepository.getCurrentUser()
+    async let profile = profileRepository.getProfile()
+    return try await (user, profile)
+}
+```
+
+### Task和Actor使用
+```swift
+// 使用Task进行后台处理
+func performBackgroundTask() {
+    Task {
+        try await heavyOperation()
+    }
+}
+
+// 使用actor保护共享状态
+actor DataCache {
+    private var cache: [String: Data] = [:]
+    
+    func store(_ data: Data, for key: String) {
+        cache[key] = data
+    }
+}
+```
+
+## 错误处理模式
+
+### 统一错误处理
+```swift
+// 在ViewModel中统一处理错误
+private func performAuthAction<T: Sendable>(_ action: @Sendable () async throws -> T?) async {
+    isLoading = true
+    errorMessage = nil
+    
+    do {
+        _ = try await action()
+    } catch let authError as AuthError {
+        // 提供用户友好的错误信息
+        switch authError {
+        case .networkError(let underlyingError):
+            errorMessage = "网络连接失败，请检查网络设置后重试"
+        case .cancelled:
+            errorMessage = nil // 用户取消不显示错误
+        default:
+            errorMessage = authError.localizedDescription
+        }
+    } catch {
+        errorMessage = error.localizedDescription
+    }
+    
+    isLoading = false
+}
+```
+
+## 性能优化
+
+### 懒加载和缓存
+```swift
+// 使用lazy避免不必要的初始化
+lazy var expensiveResource: ExpensiveResource = {
+    ExpensiveResource()
+}()
+
+// 合理使用缓存
+private var cache: [String: CachedData] = [:]
+```
+
+### 内存管理
+```swift
+// 避免循环引用
+class ViewModel {
+    weak var delegate: ViewModelDelegate?
+    
+    @ObservationIgnored
+    private var cancellables: Set<AnyCancellable> = []
+    
+    deinit {
+        cancellables.removeAll()
+    }
+}
+```
+
+## SwiftUI最佳实践
+
+### 状态管理
+```swift
+// 使用@Observable进行状态管理
+@Observable
+@MainActor
+final class ViewModel {
+    var state: ViewState = .idle
+    var isLoading = false
+    var errorMessage: String?
+}
+```
+
+### 视图组织
+```swift
+struct ComplexView: View {
+    var body: some View {
+        VStack {
+            headerSection
+            contentSection
+            footerSection
+        }
+    }
+    
+    // MARK: - View Components
+    private var headerSection: some View {
+        // 拆分复杂视图为小组件
+    }
+}
+```

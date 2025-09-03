@@ -1,0 +1,242 @@
+---
+globs: *.swift
+description: Swift项目架构和代码组织规范
+---
+
+# Swift项目架构规范
+
+## 项目基础要求
+
+### 版本支持
+- 最低支持iOS 17.2
+- 使用Swift 6和SwiftUI
+- 使用Swift Package Manager管理依赖
+
+### 异步编程规范
+```swift
+// ✅ 推荐：使用现代async/await
+func fetchUser() async throws -> User {
+    return try await repository.getUser()
+}
+
+// ❌ 避免：使用闭包回调
+func fetchUser(completion: @escaping (Result<User, Error>) -> Void) {
+    // 避免这种方式
+}
+```
+
+## Clean Architecture适配原则
+
+### 灵活应用Clean Architecture
+- 遵循核心原则：依赖倒置、职责分离
+- 根据业务复杂度调整抽象层次
+- 不强制完全遵循，要具体业务具体分析
+
+### 架构决策指南
+```swift
+// 简单CRUD操作：可以简化UseCase层
+class SimpleViewModel {
+    private let repository: DataRepository
+    
+    func loadData() async {
+        data = try await repository.fetchData()
+    }
+}
+
+// 复杂业务逻辑：保留UseCase层
+class ComplexViewModel {
+    private let useCase: ComplexBusinessUseCase
+    
+    func performComplexOperation() async {
+        try await useCase.execute(with: parameters)
+    }
+}
+```
+
+## 代码组织规范
+
+### 文件结构
+```swift
+//
+//  FileName.swift
+//  camfoloClean
+//
+//  Created by admin on YYYY/MM/DD.
+//
+
+import Foundation
+
+/// 类或协议的主要功能描述
+/// 详细说明其职责和使用场景
+protocol/class ClassName {
+    // MARK: - Properties
+    
+    // MARK: - Initialization
+    
+    // MARK: - Public Methods
+    
+    // MARK: - Private Methods
+}
+```
+
+### 注释规范
+```swift
+/// 在核心逻辑上要写注释
+/// 解释为什么这样设计，而不仅仅是做什么
+func complexBusinessLogic() {
+    // 业务规则：用户必须先验证邮箱才能执行此操作
+    guard user.isEmailVerified else {
+        throw ValidationError.emailNotVerified
+    }
+}
+
+/// 在类和重要方法上要补充注释
+/// - Parameter user: 要验证的用户对象
+/// - Returns: 验证结果
+/// - Throws: ValidationError 如果验证失败
+func validateUser(_ user: User) throws -> ValidationResult {
+    // 实现逻辑
+}
+```
+
+## 并发和线程安全
+
+### Sendable合规性
+```swift
+// 对于需要跨并发边界传递的类型
+struct User: Sendable {
+    let id: String
+    let name: String
+}
+
+// 对于包含可变状态的类
+final class Repository: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "repository.queue")
+    // 确保线程安全的实现
+}
+```
+
+### MainActor使用
+```swift
+// UI相关的类必须使用@MainActor
+@MainActor
+@Observable
+final class ViewModel {
+    var uiState: UIState = .idle
+}
+
+// 需要在主线程执行的方法
+@MainActor
+func updateUI() {
+    // UI更新逻辑
+}
+```
+
+## 错误处理最佳实践
+
+### 统一错误定义
+```swift
+enum ModuleError: LocalizedError, Equatable {
+    case networkError(error: Error)
+    case invalidData
+    case userCancelled
+    case unknown(String)
+    
+    var errorDescription: String? {
+        switch self {
+        case .networkError(let error):
+            return "网络错误：\(error.localizedDescription)"
+        case .invalidData:
+            return "数据格式无效"
+        case .userCancelled:
+            return nil // 用户取消不显示错误
+        case .unknown(let message):
+            return message
+        }
+    }
+    
+    // 实现Equatable以支持测试
+    static func == (lhs: ModuleError, rhs: ModuleError) -> Bool {
+        // 实现比较逻辑
+    }
+}
+```
+
+### 错误映射模式
+```swift
+extension DomainError {
+    static func mapFromThirdPartyError(_ error: Error) -> DomainError {
+        // 将第三方框架错误映射为领域错误
+    }
+}
+```
+
+## 测试支持规范
+
+### Mock实现
+```swift
+// 每个模块都应该提供Mock实现
+final class MockAuthRepository: @unchecked Sendable, AuthRepository {
+    private var mockData: [String: Any] = [:]
+    
+    // 提供可配置的Mock行为
+    func configure(shouldFailWith error: Error? = nil) {
+        // Mock配置逻辑
+    }
+}
+```
+
+### Preview支持
+```swift
+#Preview {
+    let mockContainer = MockDIContainer()
+    let viewModel = mockContainer.makeAuthViewModel()
+    return SomeView(viewModel: viewModel)
+}
+```
+
+## 性能优化指南
+
+### 懒加载
+```swift
+// DI容器中使用lazy避免循环依赖
+lazy var authUseCase: AuthUseCaseProtocol = {
+    AuthUseCase(authRepository: authRepository)
+}()
+```
+
+### 内存管理
+```swift
+// 避免循环引用
+class ViewModel {
+    @ObservationIgnored
+    private var cancellables: Set<AnyCancellable> = []
+    
+    deinit {
+        cancellables.removeAll()
+    }
+}
+```
+
+## 模块间通信
+
+### 事件总线模式
+```swift
+// 使用EventBus进行模块间解耦通信
+protocol EventBus: Sendable {
+    func publish<T: Sendable>(_ event: T)
+    func subscribe<T: Sendable>(to eventType: T.Type) -> AsyncStream<T>
+}
+```
+
+### 共享状态管理
+```swift
+// 使用actor确保共享状态的线程安全
+actor SharedStateManager {
+    private var state: AppState = .initial
+    
+    func updateState(_ newState: AppState) {
+        state = newState
+    }
+}
+```

@@ -1,0 +1,212 @@
+---
+description: 依赖注入和模块化设计规范
+globs: **/DependencyInjection/*.swift,**/UseCases/*.swift,**/Repositories/*.swift
+---
+
+# 依赖注入设计规范
+
+## DI容器设计原则
+
+### 容器接口设计
+```swift
+protocol DIContainer: Sendable {
+    // 只暴露必要的高层抽象
+    var authUseCase: AuthUseCaseProtocol { get }
+    var dataUseCase: DataUseCaseProtocol { get }
+    
+    // ViewModel工厂方法
+    @MainActor
+    func makeAuthViewModel() -> AuthViewModel
+    @MainActor  
+    func makeDataViewModel() -> DataViewModel
+}
+```
+
+### 实现规范
+```swift
+final class DefaultDIContainer: @unchecked Sendable, DIContainer {
+    
+    // MARK: - Services (私有，不暴露给外部)
+    private lazy var appleSignInService: AuthProviderService = {
+        AppleSignInService()
+    }()
+    
+    // MARK: - Repositories (私有，通过UseCase暴露)
+    private lazy var authRepository: AuthRepository = {
+        AuthRepositoryImpl(
+            appleSignInService: appleSignInService,
+            googleSignInService: googleSignInService
+        )
+    }()
+    
+    // MARK: - Use Cases (公开，供ViewModel使用)
+    lazy var authUseCase: AuthUseCaseProtocol = {
+        AuthUseCase(authRepository: authRepository)
+    }()
+    
+    // MARK: - ViewModels (工厂方法，确保在主线程创建)
+    @MainActor
+    func makeAuthViewModel() -> AuthViewModel {
+        AuthViewModel(authUseCase: authUseCase)
+    }
+}
+```
+
+## 依赖层次规范
+
+### 依赖方向
+```
+Presentation Layer (ViewModels)
+       ↓ 依赖
+Domain Layer (UseCases)
+       ↓ 依赖  
+Domain Layer (Repository Protocols)
+       ↑ 实现
+Data Layer (Repository Implementations)
+```
+
+### 抽象级别
+- **暴露UseCase**：ViewModel依赖UseCase，不直接依赖Repository
+- **隐藏Repository**：Repository作为内部实现，通过UseCase暴露
+- **封装Service**：第三方服务实现对外部完全透明
+
+## Mock和测试支持
+
+### Mock容器设计
+```swift
+final class MockDIContainer: @unchecked Sendable, DIContainer {
+    private let mockAuthRepository = MockAuthRepository()
+    
+    // 提供配置Mock行为的方法
+    func configureMockAuth(shouldFail: Bool = false, user: User? = nil) {
+        mockAuthRepository.configure(shouldFail: shouldFail, user: user)
+    }
+    
+    var authUseCase: AuthUseCaseProtocol {
+        AuthUseCase(authRepository: mockAuthRepository)
+    }
+    
+    @MainActor
+    func makeAuthViewModel() -> AuthViewModel {
+        AuthViewModel(authUseCase: authUseCase)
+    }
+}
+```
+
+### 测试友好的设计
+```swift
+// Repository接口支持测试
+protocol AuthRepository: Sendable {
+    func signIn() async throws -> AuthResult
+    func getCurrentUser() async -> User?
+}
+
+// Mock实现提供可控的测试行为
+final class MockAuthRepository: AuthRepository {
+    var shouldFail = false
+    var mockUser: User?
+    
+    func signIn() async throws -> AuthResult {
+        if shouldFail {
+            throw AuthError.networkError
+        }
+        let user = mockUser ?? User.defaultMock
+        return AuthResult(user: user, isNewUser: false)
+    }
+}
+```
+
+## 生命周期管理
+
+### 资源清理
+```swift
+final class ResourceManager {
+    private var resources: [Resource] = []
+    
+    deinit {
+        // 确保资源得到正确清理
+        resources.forEach { $0.cleanup() }
+    }
+}
+```
+
+### 异步任务管理
+```swift
+@Observable
+@MainActor
+final class ViewModel {
+    @ObservationIgnored
+    private var backgroundTask: Task<Void, Never>?
+    
+    deinit {
+        backgroundTask?.cancel()
+    }
+    
+    func startBackgroundWork() {
+        backgroundTask = Task {
+            // 后台工作
+        }
+    }
+}
+```
+
+## 模块边界管理
+
+### 跨模块通信
+```swift
+// 使用协议定义模块边界
+protocol UserModuleInterface: Sendable {
+    func getCurrentUser() async -> User?
+    func observeAuthState() -> AsyncStream<AuthState>
+}
+
+// 避免直接依赖其他模块的具体实现
+class CameraModule {
+    private let userModule: UserModuleInterface
+    
+    init(userModule: UserModuleInterface) {
+        self.userModule = userModule
+    }
+}
+```
+
+### 共享组件
+```swift
+// 共享的核心组件放在Core目录
+// Core/Utils/AuthUtils.swift
+// Core/Extensions/UIWindow+Extension.swift
+// Core/DependencyInjection/DIContainer.swift
+```
+
+## 避免的反模式
+
+### ❌ 服务定位器模式
+```swift
+// 避免：全局服务定位器
+class ServiceLocator {
+    static shared = ServiceLocator()
+    func get<T>(_ type: T.Type) -> T { }
+}
+
+// 推荐：显式依赖注入
+class ViewModel {
+    private let useCase: UseCaseProtocol
+    init(useCase: UseCaseProtocol) { }
+}
+```
+
+### ❌ 过度复杂的DI
+```swift
+// 避免：过度复杂的DI框架
+// 推荐：简单明了的手动DI
+```
+
+### ❌ 单例模式滥用
+```swift
+// 避免：过多的单例
+class GlobalManager {
+    static let shared = GlobalManager()
+}
+
+// 推荐：通过DI管理生命周期
+```

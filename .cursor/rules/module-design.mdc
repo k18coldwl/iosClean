@@ -1,0 +1,172 @@
+---
+alwaysApply: true
+description: iOS模块设计和Clean Architecture最佳实践规则
+---
+
+# iOS模块设计规则
+
+## 模块结构规范
+
+### 标准三层架构
+每个功能模块必须遵循以下目录结构：
+```
+ModuleName/
+├── Domain/           # 业务核心层（无外部依赖）
+│   ├── Entities/     # 业务实体和枚举
+│   ├── Repositories/ # 仓库抽象协议
+│   ├── Services/     # 业务服务抽象
+│   └── UseCases/     # 业务用例
+├── Data/             # 数据层（依赖Domain抽象）
+│   ├── Services/     # 第三方服务具体实现
+│   ├── Repositories/ # 仓库具体实现
+│   └── Mappers/      # 数据转换器
+└── Presentation/     # 表现层（依赖Domain）
+    ├── ViewModels/   # 视图模型（MVVM）
+    └── Views/        # SwiftUI视图
+```
+
+### 依赖方向规则
+- **Domain层**：不依赖任何外部框架，只包含纯Swift代码
+- **Data层**：只依赖Domain层的抽象协议
+- **Presentation层**：只依赖Domain层，不直接依赖Data层
+
+## UseCase设计原则
+
+### 何时合并UseCase
+如果UseCase只是简单的Repository代理调用，应该合并：
+
+**❌ 过度设计示例：**
+```swift
+// 避免：每个简单操作都创建独立UseCase
+protocol SignInWithGoogleUseCaseProtocol {
+    func execute() async throws -> AuthResult
+}
+class SignInWithGoogleUseCase {
+    func execute() async throws -> AuthResult {
+        return try await authRepository.signInWithGoogle() // 仅仅是代理调用
+    }
+}
+```
+
+**✅ 推荐设计：**
+```swift
+// 推荐：统一的业务用例
+protocol AuthUseCaseProtocol: Sendable {
+    func signInWithGoogle() async throws -> AuthResult
+    func signInWithApple() async throws -> AuthResult
+    func signOut() async throws
+    func getCurrentUser() async -> User?
+}
+```
+
+### 何时保留独立UseCase
+当UseCase包含复杂业务逻辑时，应该保持独立：
+- 需要多步骤操作
+- 包含业务规则验证
+- 需要调用多个Repository
+- 包含事务处理逻辑
+
+## 文件命名规范
+
+### 协议和实现命名
+- 协议：`AuthRepository`
+- 实现：`AuthRepositoryImpl` 或 `FirebaseAuthRepository`
+- UseCase协议：`AuthUseCaseProtocol`
+- UseCase实现：`AuthUseCase`
+
+### 文件组织
+- 每个文件只包含一个主要的类或协议
+- 相关的小型辅助类型可以放在同一文件中
+- Mock实现统一放在`MockUseCases.swift`中
+
+## 错误处理规范
+
+### 统一错误类型
+```swift
+enum ModuleError: LocalizedError, Equatable {
+    case networkError(error: Error)
+    case invalidData
+    case operationNotAllowed
+    case unknown(String)
+    
+    var errorDescription: String? {
+        // 提供用户友好的错误描述
+    }
+}
+```
+
+### 错误映射
+在Mapper中统一处理第三方框架错误到业务错误的映射：
+```swift
+extension AuthError {
+    static func mapFromFirebaseError(_ error: Error) -> AuthError {
+        // 统一的错误映射逻辑
+    }
+}
+```
+
+## 依赖注入规范
+
+### DI容器设计
+- 每个模块在DI容器中只暴露必要的依赖
+- 优先暴露高层抽象（UseCase）而不是底层实现
+- 使用lazy初始化避免循环依赖
+
+```swift
+protocol DIContainer: Sendable {
+    // 暴露UseCase而不是Repository
+    var authUseCase: AuthUseCaseProtocol { get }
+    
+    @MainActor
+    func makeAuthViewModel() -> AuthViewModel
+}
+```
+
+## 模块评估标准
+
+### 设计合理性检查清单
+- [ ] 是否遵循Clean Architecture分层？
+- [ ] 依赖方向是否正确？
+- [ ] 是否存在只做简单代理的UseCase？
+- [ ] 是否有空的文件夹？
+- [ ] 错误处理是否统一？
+- [ ] 命名是否一致且语义清晰？
+
+### 复杂度评估
+- **简单模块**：可以考虑直接使用Repository，跳过UseCase层
+- **中等复杂度**：使用统一的UseCase，避免过度拆分
+- **复杂模块**：按业务领域拆分多个UseCase
+
+## 代码质量要求
+
+### 注释规范
+- 所有public协议和类必须有文档注释
+- 复杂的业务逻辑必须有解释性注释
+- 使用中文注释解释业务概念，英文注释解释技术实现
+
+### 异步编程
+- 优先使用async/await而不是闭包
+- 正确处理Sendable和并发安全
+- 使用@MainActor确保UI操作在主线程
+
+### 测试支持
+- 每个模块必须提供Mock实现
+- Mock实现应该模拟真实的业务场景
+- 支持Preview和单元测试
+
+## 避免的反模式
+
+### ❌ 过度抽象
+- 不要为每个简单操作都创建独立的UseCase
+- 不要创建只有一个实现的协议（除非确实需要测试替换）
+- 不要预先创建空的文件夹
+
+### ❌ 职责混乱
+- Domain层不应该依赖具体的框架
+- ViewModel不应该直接依赖Data层
+- Service不应该包含UI逻辑
+
+### ❌ 命名不当
+- 避免过于抽象的命名（如Manager、Handler）
+- 避免技术术语作为业务概念的命名
+- 保持命名的一致性和可预测性
