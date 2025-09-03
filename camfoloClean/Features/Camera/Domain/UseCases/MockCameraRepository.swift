@@ -1,89 +1,20 @@
 //
-//  MockUseCases.swift
+//  MockCameraRepository.swift
 //  camfoloClean
 //
-//  Created by admin on 2025/9/2.
+//  Created by admin on 2025/1/27.
 //
 
 import Foundation
 import UIKit
 
-// MARK: - Mock Repository for Testing and Previews
-final class MockAuthRepository: @unchecked Sendable, AuthRepository {
-    private var currentUserValue: User?
-    private var shouldFail = false
-    
-    init(initialUser: User? = nil) {
-        self.currentUserValue = initialUser
-    }
-    
-    private func updateUser(_ user: User?) {
-        currentUserValue = user
-    }
-    
-    /// 配置Mock行为
-    /// - Parameters:
-    ///   - shouldFail: 是否模拟失败
-    ///   - user: 预设的用户对象
-    func configure(shouldFail: Bool = false, user: User? = nil) {
-        self.shouldFail = shouldFail
-        if let user = user {
-            updateUser(user)
-        }
-    }
-    
-    func signInWithGoogle() async throws -> AuthResult {
-        try await Task.sleep(nanoseconds: 1_000_000_000) // Simulate network delay
-        
-        let user = User(
-            id: "google_123",
-            email: "test@gmail.com",
-            displayName: "Test User",
-            photoURL: nil,
-            provider: .google
-        )
-        
-        updateUser(user)
-        return AuthResult(user: user, isNewUser: false)
-    }
-    
-    func signInWithApple() async throws -> AuthResult {
-        try await Task.sleep(nanoseconds: 1_000_000_000) // Simulate network delay
-        
-        let user = User(
-            id: "apple_123",
-            email: "test@privaterelay.appleid.com",
-            displayName: "Test User",
-            photoURL: nil,
-            provider: .apple
-        )
-        
-        updateUser(user)
-        return AuthResult(user: user, isNewUser: true)
-    }
-    
-    func signOut() async throws {
-        updateUser(nil)
-    }
-    
-    func getCurrentUser() async -> User? {
-        return currentUserValue
-    }
-    
-    func deleteAccount() async throws {
-        updateUser(nil)
-    }
-    
-    func linkAccount(with provider: AuthProvider) async throws -> AuthResult {
-        throw AuthError.operationNotAllowed
-    }
-    
-    func unlinkAccount(from provider: AuthProvider) async throws -> User {
-        throw AuthError.operationNotAllowed
-    }
-}
+// 导入必要的Camera模块类型
+// 这些类型定义在同一模块的Domain层中
 
-// MARK: - Mock Camera Repository for Testing
+// MARK: - Mock Camera Repository
+
+/// Mock相机仓库，用于测试和预览
+/// 提供可配置的Mock行为，避免真实权限检查和相机操作
 final class MockCameraRepository: @unchecked Sendable, CameraRepository {
     private var hasPermission = true
     private var shouldFailCapture = false
@@ -179,9 +110,9 @@ final class MockCameraRepository: @unchecked Sendable, CameraRepository {
     }
 }
 
-// MARK: - Mock Photo Library Repository
+// MARK: - Mock Photo Library Repositories
 
-/// Mock照片库仓库，用于测试和预览
+/// Mock本地照片库仓库，用于测试和预览
 final class MockLocalPhotoLibraryRepository: @unchecked Sendable, LocalPhotoLibraryRepository {
     private var photos: [String: Photo] = [:]
     private var shouldFail = false
@@ -245,8 +176,6 @@ final class MockLocalPhotoLibraryRepository: @unchecked Sendable, LocalPhotoLibr
         return (currentSize + requiredSpace) < maxSize
     }
 }
-
-// MARK: - Mock System Photo Library Repository
 
 /// Mock系统相册仓库，用于测试和预览
 final class MockSystemPhotoLibraryRepository: @unchecked Sendable, SystemPhotoLibraryRepository {
@@ -321,7 +250,7 @@ final class MockSystemPhotoLibraryRepository: @unchecked Sendable, SystemPhotoLi
     }
 }
 
-// MARK: - Mock Camera UseCase for Testing
+// MARK: - Mock Camera UseCase
 
 /// Mock相机用例，用于测试和预览
 /// 提供可配置的Mock行为，避免真实权限检查和相机操作
@@ -449,50 +378,5 @@ final class MockCameraUseCase: @unchecked Sendable, CameraUseCaseProtocol {
         text.draw(in: textRect, withAttributes: attributes)
         
         return UIGraphicsGetImageFromCurrentImageContext() ?? UIImage()
-    }
-}
-
-// MARK: - Mock DI Container for Testing
-final class MockDIContainer: @unchecked Sendable, DIContainer {
-    // 创建已登录的测试用户，避免认证流程阻塞Camera功能测试
-    private let mockAuthRepository = MockAuthRepository(initialUser: User(
-        id: "test_user_123",
-        email: "test@example.com", 
-        displayName: "Test User",
-        photoURL: nil,
-        provider: .google
-    ))
-    private let mockCameraRepository = MockCameraRepository()
-    private let mockLocalPhotoLibraryRepository = MockLocalPhotoLibraryRepository()
-    private let mockSystemPhotoLibraryRepository = MockSystemPhotoLibraryRepository()
-    
-    var authRepository: AuthRepository {
-        mockAuthRepository
-    }
-    
-    lazy var authUseCase: AuthUseCaseProtocol = {
-        AuthUseCase(authRepository: authRepository)
-    }()
-    
-    private lazy var mockCameraUseCase: CameraUseCaseProtocol = {
-        CameraUseCase(
-            cameraRepository: mockCameraRepository,
-            localPhotoLibraryRepository: mockLocalPhotoLibraryRepository,
-            systemPhotoLibraryRepository: mockSystemPhotoLibraryRepository
-        )
-    }()
-    
-    var cameraUseCase: CameraUseCaseProtocol {
-        mockCameraUseCase
-    }
-    
-    @MainActor
-    func makeAuthViewModel() -> AuthViewModel {
-        AuthViewModel(authUseCase: authUseCase)
-    }
-    
-    @MainActor
-    func makeCameraViewModel() -> CameraViewModel {
-        CameraViewModel(cameraUseCase: cameraUseCase)
     }
 }
