@@ -20,6 +20,12 @@
     <string>Allow CamFolo to access your device for App tracking. You can adjust it in Settings.</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>CamFolo needs to access the local network to connect to Firebase services for authentication and data synchronization.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>CamFolo needs access to your camera to take photos and capture moments.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>CamFolo needs access to your photo library to save captured photos.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>CamFolo needs access to your photo library to view and manage your photos.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsArbitraryLoads</key>
