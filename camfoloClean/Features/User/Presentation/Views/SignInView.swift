@@ -136,7 +136,6 @@ struct SignInView: View {
 }
 
 #Preview {
-    let mockDIContainer = MockDIContainer()
-    let viewModel = mockDIContainer.makeAuthViewModel()
+    let viewModel = AppContainer.shared.makeAuthViewModel()
     SignInView(viewModel: viewModel)
 }

@@ -135,7 +135,6 @@ struct UserProfileView: View {
 
 
 #Preview {
-    let mockDIContainer = MockDIContainer()
-    let viewModel = mockDIContainer.makeAuthViewModel()
+    let viewModel = AppContainer.shared.makeAuthViewModel()
     UserProfileView(viewModel: viewModel)
 }

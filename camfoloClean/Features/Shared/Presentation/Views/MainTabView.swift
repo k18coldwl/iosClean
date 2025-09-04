@@ -17,6 +17,9 @@ struct MainTabView: View {
     @EnvironmentObject private var appContainer: AppContainer
     let authViewModel: AuthViewModel
     @State private var selectedTab: TabType = .capture
+    @State private var previousTab: TabType = .capture
+    
+    // 🚀 极简架构：移除CameraViewModel依赖，使用高性能Manager模式
     
     // MARK: - Body
     
@@ -36,6 +39,14 @@ struct MainTabView: View {
         .ignoresSafeArea(.all)
         .navigationBarHidden(true)
         .statusBarHidden()
+        .onAppear {
+            print("📱 MainTabView: 使用高性能Manager模式，无需初始化ViewModel")
+        }
+        .onChange(of: selectedTab) { oldTab, newTab in
+            print("📱 MainTabView: Tab changed from \(oldTab) to \(newTab)")
+            // 🚀 Manager模式：相机自动管理生命周期，无需手动控制
+            previousTab = oldTab
+        }
     }
     
     // MARK: - View Components
@@ -64,7 +75,7 @@ struct MainTabView: View {
 // MARK: - Preview
 
 #Preview {
-    let authViewModel = MockDIContainer().makeAuthViewModel()
+    let authViewModel = AppContainer.shared.makeAuthViewModel()
     MainTabView(authViewModel: authViewModel)
         .environmentObject(AppContainer.shared)
 }

@@ -37,4 +37,27 @@ final class AppContainer: ObservableObject, @unchecked Sendable {
     private func initializeSystemPermissions() async {
         await diContainer.permissionService.initializeSystemPermissions()
     }
+    
+    // MARK: - ViewModel Factories
+    
+    @MainActor
+    func makeAuthViewModel() -> AuthViewModel {
+        return diContainer.makeAuthViewModel()
+    }
+    
+    // MARK: - 🚀 Ultra High-Performance Manager Access (零抽象开销)
+    @MainActor
+    var cameraManager: CameraManager {
+        return diContainer.cameraManager
+    }
+    
+    @MainActor
+    var photosManager: PhotosManager {
+        return diContainer.photosManager
+    }
+    
+    @MainActor
+    func makeHighPerformanceCameraView() -> SimpleCameraView {
+        return diContainer.makeHighPerformanceCameraView()
+    }
 }
