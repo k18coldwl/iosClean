@@ -7,7 +7,7 @@ final class CameraViewModel {
     var filterItems: [FilterPreviewItem] = []
     var selectedFilterID: String?
     
-    let cameraManager = CameraCaptureManager()
+    let cameraManager = ImprovedCameraCaptureManager()
     var mainRenderView: RenderView = RenderView(frame: .zero)
     
     // 使用优化的预览管理器

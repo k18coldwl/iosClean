@@ -170,7 +170,7 @@ final class OptimizedPreviewManager {
     
     func activatePreview(
         item: FilterPreviewItem,
-        cameraManager: CameraCaptureManager
+        cameraManager: ImprovedCameraCaptureManager
     ) -> RenderView {
         let renderView = renderViewPool.borrowRenderView()
         let filter = filterPool.borrowFilter(for: item.name, renderView: renderView)
@@ -215,7 +215,7 @@ final class OptimizedPreviewManager {
         }
     }
     
-    func resumePreview(renderView: RenderView, cameraManager: CameraCaptureManager) {
+    func resumePreview(renderView: RenderView, cameraManager: ImprovedCameraCaptureManager) {
         let renderViewId = ObjectIdentifier(renderView)
         
         if var connection = activeConnections[renderViewId], !connection.isActive {

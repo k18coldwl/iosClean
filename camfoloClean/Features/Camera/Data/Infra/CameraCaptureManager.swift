@@ -2,9 +2,10 @@ import Foundation
 import GPUImage
 
 @MainActor
-final class CameraCaptureManager {
+final class ImprovedCameraCaptureManager {
     let camera: Camera
-    private var activeConnections: Set<ObjectIdentifier> = []
+    private var connections: [ObjectIdentifier: (BasicOperation, RenderView)] = [:]
+    private var mainConnection: (BasicOperation, RenderView)?
     
     init() {
         camera = try! Camera(sessionPreset: .hd1280x720)
@@ -12,32 +13,55 @@ final class CameraCaptureManager {
         try? camera.startCapture()
     }
     
-    /// 为主预览绑定滤镜
     func bindMainPreview(to renderView: RenderView, with filter: BasicOperation) {
-        // 对于主预览，我们可以安全地重新连接
-        camera.removeAllTargets()
-        camera --> filter --> renderView
+        // 移除旧的主连接
+        if let oldConnection = mainConnection {
+            oldConnection.0.removeAllTargets()
+        }
         
-        // 重新连接所有活跃的预览连接
-        // （这里需要你确认 GPUImage3 是否支持多目标连接）
+        // 建立新的主连接
+        camera --> filter --> renderView
+        mainConnection = (filter, renderView)
+        
+        print("📱 主预览已连接: \(type(of: filter))")
     }
     
-    /// 添加预览连接
     func addPreviewConnection(filter: BasicOperation, renderView: RenderView) {
         let connectionId = ObjectIdentifier(renderView)
-        if !activeConnections.contains(connectionId) {
-            camera --> filter --> renderView
-            activeConnections.insert(connectionId)
+        
+        // 移除可能存在的旧连接
+        if let oldConnection = connections[connectionId] {
+            oldConnection.0.removeAllTargets()
+        }
+        
+        // 建立新连接
+        camera --> filter --> renderView
+        connections[connectionId] = (filter, renderView)
+        
+        print("📱 预览连接已添加: \(type(of: filter)), 总连接数: \(connections.count)")
+    }
+    
+    func removePreviewConnection(filter: BasicOperation, renderView: RenderView) {
+        let connectionId = ObjectIdentifier(renderView)
+        
+        if let connection = connections.removeValue(forKey: connectionId) {
+            connection.0.removeAllTargets()
+            print("📱 预览连接已移除: \(type(of: filter)), 剩余连接数: \(connections.count)")
         }
     }
     
-    /// 移除预览连接
-    func removePreviewConnection(renderView: RenderView) {
-        let connectionId = ObjectIdentifier(renderView)
-        if activeConnections.contains(connectionId) {
-            // 移除特定连接（需要确认 GPUImage3 的具体方法）
-            renderView.removeFromSuperview() // 临时方案
-            activeConnections.remove(connectionId)
+    func reconnectAll() {
+        // 重新连接所有现有连接（用于故障恢复）
+        print("🔄 重新连接所有预览...")
+        
+        // 重连主预览
+        if let mainConn = mainConnection {
+            camera --> mainConn.0 --> mainConn.1
+        }
+        
+        // 重连所有预览连接
+        for (_, connection) in connections {
+            camera --> connection.0 --> connection.1
         }
     }
 }
