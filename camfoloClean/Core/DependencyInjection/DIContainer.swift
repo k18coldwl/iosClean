@@ -31,7 +31,7 @@ protocol DIContainer: Sendable {
     
     // 🔥 Ultra High-Performance Camera View (零抽象开销)
     @MainActor
-    func makeHighPerformanceCameraView() -> SimpleCameraView
+    func makeHighPerformanceCameraView() -> CameraView
 }
 
 final class DefaultDIContainer: @unchecked Sendable, DIContainer {
@@ -87,8 +87,8 @@ final class DefaultDIContainer: @unchecked Sendable, DIContainer {
     
     // MARK: - 🔥 Ultra High-Performance Camera Views
     @MainActor
-    func makeHighPerformanceCameraView() -> SimpleCameraView {
-        SimpleCameraView()  // Manager模式：每个View管理自己的Manager实例
+    func makeHighPerformanceCameraView() -> CameraView {
+        CameraView()  // Manager模式：每个View管理自己的Manager实例
     }
 }
 

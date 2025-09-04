@@ -1,5 +1,5 @@
 {
-  "originHash" : "7ed78cec4688813732ed048994a6c24c5c081e333197fce4007040cea0ee7d0c",
+  "originHash" : "d8566f930259a8e3d0c6a7cc8a08c7b15a00499503162095f25b039b19c947c0",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -80,6 +80,15 @@
       "state" : {
         "revision" : "60da361632d0de02786f709bdc0c4df340f7613e",
         "version" : "8.1.0"
+      }
+    },
+    {
+      "identity" : "gpuimage3",
+      "kind" : "remoteSourceControl",
+      "location" : "git@gitlab.com:camfolo/ios/gpuimage3.git",
+      "state" : {
+        "revision" : "ab3148686b1a8e0fa22b917347f5c52bab5b97c0",
+        "version" : "0.1.0"
       }
     },
     {

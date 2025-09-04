@@ -10,6 +10,7 @@
 		8421551A2E669BA70041A71C /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 842154DB2E6681170041A71C /* FirebaseAuth */; };
 		8424CAD12E66F40E0037C87B /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 8424CAD02E66F40E0037C87B /* GoogleSignIn */; };
 		8424CAD32E66F40E0037C87B /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 8424CAD22E66F40E0037C87B /* GoogleSignInSwift */; };
+		8424CEAD2E6936DB0037C87B /* GPUImage in Frameworks */ = {isa = PBXBuildFile; productRef = 8424CEAC2E6936DB0037C87B /* GPUImage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,6 +48,7 @@
 				8424CAD32E66F40E0037C87B /* GoogleSignInSwift in Frameworks */,
 				8421551A2E669BA70041A71C /* FirebaseAuth in Frameworks */,
 				8424CAD12E66F40E0037C87B /* GoogleSignIn in Frameworks */,
+				8424CEAD2E6936DB0037C87B /* GPUImage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +94,7 @@
 				842154DB2E6681170041A71C /* FirebaseAuth */,
 				8424CAD02E66F40E0037C87B /* GoogleSignIn */,
 				8424CAD22E66F40E0037C87B /* GoogleSignInSwift */,
+				8424CEAC2E6936DB0037C87B /* GPUImage */,
 			);
 			productName = camfoloClean;
 			productReference = 842154C82E6681150041A71C /* camfoloClean.app */;
@@ -124,6 +127,7 @@
 			packageReferences = (
 				842154DE2E6681170041A71C /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				8424CACF2E66F40E0037C87B /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				8424CEAB2E6936DB0037C87B /* XCRemoteSwiftPackageReference "gpuimage3" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 842154C92E6681150041A71C /* Products */;
@@ -377,6 +381,14 @@
 				minimumVersion = 9.0.0;
 			};
 		};
+		8424CEAB2E6936DB0037C87B /* XCRemoteSwiftPackageReference "gpuimage3" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "git@gitlab.com:camfolo/ios/gpuimage3.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -394,6 +406,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 8424CACF2E66F40E0037C87B /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		8424CEAC2E6936DB0037C87B /* GPUImage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8424CEAB2E6936DB0037C87B /* XCRemoteSwiftPackageReference "gpuimage3" */;
+			productName = GPUImage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

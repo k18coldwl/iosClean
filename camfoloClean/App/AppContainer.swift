@@ -57,7 +57,7 @@ final class AppContainer: ObservableObject, @unchecked Sendable {
     }
     
     @MainActor
-    func makeHighPerformanceCameraView() -> SimpleCameraView {
+    func makeHighPerformanceCameraView() -> CameraView {
         return diContainer.makeHighPerformanceCameraView()
     }
 }
