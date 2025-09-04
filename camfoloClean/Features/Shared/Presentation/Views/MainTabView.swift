@@ -19,22 +19,38 @@ struct MainTabView: View {
     @State private var selectedTab: TabType = .capture
     @State private var previousTab: TabType = .capture
     
-    // 🚀 极简架构：移除CameraViewModel依赖，使用高性能Manager模式
-    
     // MARK: - Body
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // 背景色 - 根据Figma设计使用深色背景
-            Color.black
-                .ignoresSafeArea(.all)
-            
-            // 主内容区域 - 使用ZStack布局避免TabView的内边距问题
-            currentTabContent
-            
-            // 自定义Tab Bar - 固定在底部
-            CustomTabBar(selectedTab: $selectedTab)
-                .background(Color.clear)
+        GeometryReader { geometry in
+            ZStack(alignment: .bottom) {
+                // 背景色
+                Color.black
+                    .ignoresSafeArea(.all)
+                
+                // 主内容区域 - 给底部TabBar留出空间
+                VStack(spacing: 0) {
+                    // 内容区域
+                    currentTabContent
+                        .frame(
+                            width: geometry.size.width,
+                            height: geometry.size.height - tabBarHeight - bottomSafeArea(geometry)
+                        )
+                    
+                    // TabBar 占位空间
+                    Spacer()
+                        .frame(height: tabBarHeight + bottomSafeArea(geometry))
+                }
+                
+                // 自定义Tab Bar - 固定在底部
+                VStack {
+                    Spacer()
+                    CustomTabBar(selectedTab: $selectedTab)
+                        .frame(height: tabBarHeight)
+                        .background(Color.clear)
+                        .padding(.bottom, bottomSafeArea(geometry))
+                }
+            }
         }
         .ignoresSafeArea(.all)
         .navigationBarHidden(true)
@@ -44,7 +60,6 @@ struct MainTabView: View {
         }
         .onChange(of: selectedTab) { oldTab, newTab in
             print("📱 MainTabView: Tab changed from \(oldTab) to \(newTab)")
-            // 🚀 Manager模式：相机自动管理生命周期，无需手动控制
             previousTab = oldTab
         }
     }
@@ -53,22 +68,26 @@ struct MainTabView: View {
     
     @ViewBuilder
     private var currentTabContent: some View {
-        ZStack {
-            // 当前选中的Tab内容
-            Group {
-                switch selectedTab {
-                case .capture:
-                    CaptureTabView()
-                case .templates:
-                    TemplatesTabView()
-                case .edit:
-                    EditTabView()
-                case .mine:
-                    MineTabView(authViewModel: authViewModel)
-                }
-            }
-            .ignoresSafeArea(.all)
+        switch selectedTab {
+        case .capture:
+            CaptureTabView()
+        case .templates:
+            TemplatesTabView()
+        case .edit:
+            EditTabView()
+        case .mine:
+            MineTabView(authViewModel: authViewModel)
         }
+    }
+    
+    // MARK: - Helper Properties
+    
+    private var tabBarHeight: CGFloat {
+        80 // 自定义TabBar的高度
+    }
+    
+    private func bottomSafeArea(_ geometry: GeometryProxy) -> CGFloat {
+        geometry.safeAreaInsets.bottom
     }
 }
 

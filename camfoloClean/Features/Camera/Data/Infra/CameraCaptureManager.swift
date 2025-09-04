@@ -1,11 +1,10 @@
-// Features/Camera/Infra/CameraCaptureManager.swift
 import Foundation
 import GPUImage
-import Combine
 
-final class CameraCaptureManager: ObservableObject {
+@MainActor
+final class CameraCaptureManager {
     let camera: Camera
-    @Published var currentFrame: PictureInput? // 如果只做小窗口处理，可以不用
+    private var activeConnections: Set<ObjectIdentifier> = []
     
     init() {
         camera = try! Camera(sessionPreset: .hd1280x720)
@@ -13,14 +12,32 @@ final class CameraCaptureManager: ObservableObject {
         try? camera.startCapture()
     }
     
-    /// 将 Camera 输出直接绑定到 RenderView
-    func bind(to renderView: RenderView, with filter: BasicOperation) {
+    /// 为主预览绑定滤镜
+    func bindMainPreview(to renderView: RenderView, with filter: BasicOperation) {
+        // 对于主预览，我们可以安全地重新连接
+        camera.removeAllTargets()
         camera --> filter --> renderView
+        
+        // 重新连接所有活跃的预览连接
+        // （这里需要你确认 GPUImage3 是否支持多目标连接）
     }
     
-    /// 切换滤镜
-    func switchFilter(_ newFilter: BasicOperation, renderView: RenderView) {
-        camera.removeAllTargets()
-        camera --> newFilter --> renderView
+    /// 添加预览连接
+    func addPreviewConnection(filter: BasicOperation, renderView: RenderView) {
+        let connectionId = ObjectIdentifier(renderView)
+        if !activeConnections.contains(connectionId) {
+            camera --> filter --> renderView
+            activeConnections.insert(connectionId)
+        }
+    }
+    
+    /// 移除预览连接
+    func removePreviewConnection(renderView: RenderView) {
+        let connectionId = ObjectIdentifier(renderView)
+        if activeConnections.contains(connectionId) {
+            // 移除特定连接（需要确认 GPUImage3 的具体方法）
+            renderView.removeFromSuperview() // 临时方案
+            activeConnections.remove(connectionId)
+        }
     }
 }

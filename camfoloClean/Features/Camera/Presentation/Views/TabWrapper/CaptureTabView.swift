@@ -15,6 +15,5 @@ struct CaptureTabView: View {
     var body: some View {
         // 🚀 极简架构：直接使用高性能相机视图
         appContainer.makeHighPerformanceCameraView()
-            .ignoresSafeArea(.all)
     }
 }
