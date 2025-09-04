@@ -61,22 +61,40 @@ final class FilterPool {
     
     private func createNewFilter(filterType: String) -> BasicOperation {
         switch filterType {
-        case "SepiaTone":
-            return Pixellate()
         case "Grayscale":
-            return SaturationAdjustment()
-        case "Vignette":
-            return Vignette()
+            let filter = SaturationAdjustment()
+            filter.saturation = 0.0
+            return filter
+
+        case "Pixellate":
+            let filter = Pixellate()
+            filter.fractionalWidthOfAPixel = 0.1
+            return filter
+
+        case "BrightnessAdjustment":
+            let filter = BrightnessAdjustment()
+            filter.brightness = 0.3
+            return filter
+
         case "ColorInversion":
             return ColorInversion()
-        case "Pixellate":
-            return Pixellate()
-        case "BrightnessAdjustment":
-            return BrightnessAdjustment()
-        case "Sketch":
-            return Pixellate()
+
+        case "Vignette":
+            let filter = Vignette()
+            return filter
+
         case "Emboss":
-            return Pixellate()
+            return ColorInversion()
+
+        case "Sketch":
+            return ColorInversion()
+
+        // GPUImage3 中没有 SepiaTone，暂时用 Pixellate 替代或跳过
+        case "SepiaTone":
+            let filter = SaturationAdjustment()
+            filter.saturation = 0.5 // 模拟棕褐色
+            return filter
+
         default:
             return Pixellate()
         }
